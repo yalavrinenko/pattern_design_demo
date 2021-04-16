@@ -1,0 +1,188 @@
+\begin{frame}[fragile]
+  \frametitle{Factory}
+  \textbf{Проблема:} выполнить конструирования объектов классов-наследников некоторого интерфейса в зависимости 
+  от данных прочитанных из стороннего источника.
+  
+  \begin{minted}{c++}
+class ifuction{
+public:
+  double evaluate(double x) const { return evaluate_impl(x); }
+  virtual ~ifuction() = default;
+private:
+  virtual double evaluate_impl(double x) const = 0;
+};
+class poly2: public ifuction {...}
+class small_sin: public ifuction {...}
+
+using function_set = std::vector<std::unique_ptr<ifuction>>;
+template<typename IStream>
+function_set read_functions(IStream &input){ /*Code here*/ }
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Factory. Native} 
+  \begin{minted}[fontsize=\footnotesize]{c++}
+enum class function_tag: int{
+  poly2 = 1,
+  small_sin = 2
+};
+
+template<typename IStream>
+function_set read_functions(IStream &input){
+  function_set fs;
+  int tag;
+  while (input >> tag){
+    if (static_cast<function_tag>(tag) == function_tag::poly2){
+      double a, b, c; input >> a >> b >> c;
+      fs.emplace_back(std::make_unique<poly2>(a, b, c));
+    }
+    else if (static_cast<function_tag>(tag) == function_tag::small_sin)
+    fs.push_back(std::make_unique<small_sin>());
+  }
+  return fs;
+}
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Factory} 
+  \begin{minted}[fontsize=\footnotesize]{c++}
+class function_factory{
+  public:
+  template<class IStream>
+  std::unique_ptr<ifuction>  create_poly(IStream &in) {
+    double a, b, c; in >> a >> b >> c;
+    return std::make_unique<poly2>(a, b, c);
+  }
+  template<class IStream>
+  std::unique_ptr<ifuction>  create_small_sin(IStream &in) {
+    return std::make_unique<small_sin>();
+  }
+  
+  static function_factory& Instance(){
+    static function_factory factory;
+    return factory;
+  }
+  //singleton staff
+};
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Factory} 
+  \begin{minted}[fontsize=\footnotesize]{c++}
+template<typename IStream>
+function_set read_functions(IStream &input){
+  function_set fs;
+  int tag;
+  while (input >> tag){
+    if (static_cast<function_tag>(tag) == function_tag::poly2){
+      fs.emplace_back(function_factory::Instance().create_poly(input));
+    }
+    else if (static_cast<function_tag>(tag) == function_tag::small_sin)
+      fs.emplace_back(function_factory::Instance().create_small_sin(input));
+  }
+  return fs;
+}
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Factory} 
+  \begin{minted}[fontsize=\footnotesize]{c++}
+class function_factory{
+public:
+  using create_function = 
+        std::function<std::unique_ptr<ifuction>(std::istream&)>;
+  void register_creator(function_tag tag, create_function func) {
+    callbacks_[static_cast<int>(tag)] = std::move(func);
+  }
+  std::unique_ptr<ifuction> create_object(
+      std::istream& in, function_tag tag) {
+    return callbacks_.at(static_cast<int>(tag))(in);
+  }
+  //singleton staff
+private:
+  std::unordered_map<int, create_function> callbacks_;
+};
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Factory} 
+  \begin{minted}[fontsize=\footnotesize]{c++}
+template<typename IStream>
+function_set read_functions(IStream &input){
+  function_factory::Instance().register_creator(function_tag::poly2, 
+      [](std::istream& in){
+    double a, b, c; in >> a >> b >> c; 
+    return std::make_unique<poly2>(a, b, c);
+  });
+  function_factory::Instance().register_creator(function_tag::small_sin, 
+      [](std::istream& in){
+    return std::make_unique<small_sin>();
+  });
+  
+  function_set fs;
+  int tag;
+  while (input >> tag){
+    fs.emplace_back(function_factory::Instance()
+                    .create_object(input, static_cast<function_tag>(tag)));
+  }
+  return fs;
+}
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Factory} 
+  \begin{minted}[fontsize=\footnotesize]{c++}
+template<typename T>
+struct function_tag {
+  static constexpr int tag = T::tag;
+};
+template<>
+struct function_tag<poly2> {
+  static constexpr int tag = 1;
+};
+template<>
+struct function_tag<small_sin> {
+  static constexpr int tag = 2;
+};
+
+//function_factory methods
+template<class T>
+void register_creator(create_function func) {
+  callbacks_[function_tag<T>::tag] = std::move(func);
+}
+std::unique_ptr<ifuction> create_object(std::istream& in, int tag) {
+  return callbacks_.at(tag)(in);
+}
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Factory} 
+  \begin{minted}[fontsize=\footnotesize]{c++}
+template<typename IStream>
+function_set read_functions(IStream &input){
+  function_factory::Instance().register_creator<poly2>(
+      [](std::istream& in){
+    double a, b, c; in >> a >> b >> c; 
+    return std::make_unique<poly2>(a, b, c);
+  });
+  function_factory::Instance().register_creator<small_sin>(
+      [](std::istream& in){
+    return std::make_unique<small_sin>();
+  });
+  
+  function_set fs;
+  int tag;
+  while (input >> tag){
+    fs.emplace_back(function_factory::Instance().create_object(input, tag));
+  }
+  return fs;
+}
+  \end{minted}
+\end{frame}

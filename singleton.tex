@@ -1,0 +1,135 @@
+\begin{frame}[fragile]
+  \frametitle{Singleton}
+  \textbf{Проблема:} Написать класс который будет существовать только в единичном экземпляре
+  \begin{minted}{c++}
+    struct keyboard_impl{
+      void press(char c) {}
+    };
+    
+    //объект этого класса должен быть один
+    class Keyboard{ 
+      public:
+      void press_key(char c) {
+        raw_kb_->press(c);
+      }
+      private:
+      keyboard_impl* raw_kb_;
+    };
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Singleton}
+  \begin{minted}{c++}
+class Keyboard{
+  public:
+  Keyboard(Keyboard const&) = delete;
+  Keyboard(Keyboard &&) = delete;
+  Keyboard& operator=(Keyboard const&) = delete;
+  Keyboard& operator=(Keyboard &&) = delete;
+  
+  void press_key(char c) {
+    raw_kb_->press(c);
+  }
+  private:
+  Keyboard() = default;
+  
+  keyboard_impl* raw_kb_;
+};
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Singleton}
+  \begin{minted}{c++}
+class Keyboard{
+  public:
+  /*deleted constructors and ops*/
+  
+  static Keyboard& Instance() {
+    static Keyboard kb;
+    return kb;
+  }
+  
+  void press_key(char c) {
+    raw_kb_->press(c);
+  }
+  private:
+  Keyboard() = default;
+  
+  keyboard_impl* raw_kb_;
+};
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Singleton}
+  \begin{minted}{c++}
+  int main(int argc, char** argv){
+    auto &keyboard = Keyboard::Instance();
+    keyboard.press_key('a');
+    return 0;
+  }
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Singleton}
+  \begin{minted}{c++}
+class SharedKeyboard{
+  public:
+  /*deleted constructors and ops*/
+  
+  static std::shared_ptr<SharedKeyboard>& Instance() {
+    static std::shared_ptr<SharedKeyboard> kb = nullptr;
+    if (kb == nullptr){
+      kb = std::make_shared<SharedKeyboard>();//CP error here!
+    }
+    return kb;
+  }
+//  ...........
+  private:
+  SharedKeyboard() = default;
+  
+  keyboard_impl* raw_kb_;
+};
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Singleton}
+  \begin{minted}{c++}
+    class SharedKeyboard{
+      public:
+      /*deleted constructors and ops*/  
+      static std::shared_ptr<SharedKeyboard>& Instance() {
+        struct tmp_class : public  SharedKeyboard{
+          tmp_class() = default;
+        };
+        static std::shared_ptr<SharedKeyboard> 
+                kb = std::make_shared<tmp_class>();
+        return kb;
+      }
+      //  ...........
+      protected:
+      SharedKeyboard() = default;
+      private:
+      keyboard_impl* raw_kb_;
+    };
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Singleton}
+  \begin{minted}{c++}
+    int main(int argc, char** argv){
+      auto keyboard = SharedKeyboard::Instance();
+      keyboard->press_key('c');
+      auto key_copy = keyboard;
+      key_copy->press_key('b');
+      return 0;
+    }
+    //Warning! shared_ptr можно забрать у 
+    //статического объекта путём перемещения. 
+  \end{minted}
+\end{frame}

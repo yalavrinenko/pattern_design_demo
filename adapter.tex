@@ -1,0 +1,119 @@
+\begin{frame}[fragile]
+  \frametitle{Adapter}
+  \textbf{Проблема:} фабрика принимает функции с аргументом std::istream и ограничивает шаблон IStream.
+  Необходимо этого избежать. Возможное решение?
+  
+  \begin{minted}{c++}
+class ireader{
+public:
+  template<class T>
+  void read(T &t) { read_impl(t); }
+private:
+  template<class T>
+  virtual void read_impl(T &t) = 0;
+};
+using create_function = 
+      std::function<std::unique_ptr<ifuction>(ireader&)>;
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Adapter}
+  \textbf{Проблема:} фабрика принимает функции с аргументом std::istream и ограничивает шаблон IStream.
+  Необходимо этого избежать. Возможное решение?
+  
+  \begin{minted}{c++}
+class ireader{
+public:
+  template<class T>
+  void read(T &t) { read_impl(t); }
+private:
+  template<class T>
+  virtual void read_impl(T &t) = 0;
+};
+using create_function = 
+      std::function<std::unique_ptr<ifuction>(ireader&)>;
+  \end{minted}
+  \bf{Всё очень хорошо, только это не скомпилируется. Шаблоны и виртуальные методы не совместимы!}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Adapter. }
+  \textbf{Адаптер в общем случае это просто.} Необходимо интерфейс или данные одной сущности привести к удобоваримому виду для другой.
+  \vspace{10pt}
+  
+  В нашем случае интерфейс класса \textit{IStream} к интерфейсу на подобии класса ireader который можно использовать в качестве параметра шаблона в \textit{create\_function}.
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Adapter. Простой случай}
+    \begin{minted}{c++}
+class ireader{
+public:
+  template<class T>
+  void read(T &t) { read_impl(t); }
+private:
+  virtual void read_impl(double &t) = 0;
+  virtual void read_impl(int &t) = 0;
+};
+using create_function = 
+    std::function<std::unique_ptr<ifuction>(ireader&)>;
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Adapter. Простой случай}
+  \begin{minted}{c++}
+template<typename T>
+class stream_reader: public ireader{
+public:
+  explicit stream_reader(T &s) : stream_{s} {}
+private:
+  void read_impl(double &t) override { stream_ >> t; }
+  void read_impl(int &t) override { stream_ >> t;  }
+  T &stream_;
+};
+//....
+fs.emplace_back(function_factory::Instance()
+      .create_object(stream_reader<IStream>(input), tag));
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Adapter. Избегаем кучи кода в ireader}
+  \begin{minted}{c++}
+template<typename T>
+class virtual_entry{
+public:
+  void read(T &t) { read_impl(t); }
+  virtual ~virtual_entry() = default;
+private:
+  virtual void read_impl(T&) = 0;
+};
+
+template <typename ... T>
+class virtual_reader: public virtual_entry<T>... {
+public:
+  template<typename TArg> void read(TArg &&arg) { 
+    virtual_entry<typename std::decay<TArg>::type>
+            ::read(std::forward<TArg>(arg)); 
+  }
+};
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Adapter. Избегаем кучи кода в ireader}
+  \begin{minted}{c++}
+class ireader: public virtual_reader<double, int> {
+};
+//or
+class ireader: public virtual_reader<double, int, string> {
+};
+//or
+class ireader: public virtual_reader<std::vector<int>, 
+                                     std::vector<double>> {
+};
+  \end{minted}
+\end{frame}
+

@@ -1,0 +1,40 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{minted}
+\usepackage{multicol}
+\usetheme{Boadilla}
+
+\title{Design patterns}
+\date{\today}
+
+\begin{document}
+	\titlepage
+\include{strategy}
+\include{builder}
+\include{singleton}
+\include{factory}
+
+\include{adapter}
+\include{chain}
+
+\begin{frame}
+  \frametitle{Литература}
+  \begin{itemize}
+    \item Герб Саттер, Андрей Александреску. Стандарты программирования на С++. 
+    \item Герб Саттер. Решение сложных задач на C++. Серия "C++ In-Depth"
+    \item Герб Саттер. Новые сложные задачи на C++. 
+    
+    \vspace{10pt}
+    \item Александреску А. Современное проектирование на С++: Обобщённое программирование и прикладные шаблоны проектирования
+    
+    \vspace{10pt}
+    \item	Erich Gamma. Design Patterns: Elements of Reusable Object-Oriented Software
+    \item Dmitri Nesteruk. Design Patterns in Modern C++.
+    
+    \vspace{10pt}
+    \item https://refactoring.guru/ (весёлые картинки)
+  \end{itemize}
+\end{frame}
+\end{document}
